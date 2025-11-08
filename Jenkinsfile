@@ -21,7 +21,7 @@ pipeline {
             }
         }
 
-stage('Stop Old Container') {
+ stage('Stop Old Container') {
   steps {
     script {
       // Check if container exists
