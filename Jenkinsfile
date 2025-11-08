@@ -21,18 +21,21 @@ pipeline {
             }
         }
 
-        stage('Stop Old Container') {
-            steps {
-                script {
-                    sh '''
-                    if [ "$(docker ps -q -f name=$CONTAINER)" ]; then
-                      docker stop $CONTAINER && docker rm $CONTAINER
-                    fi
-                    '''
-                }
-            }
-        }
-
+stage('Stop Old Container') {
+  steps {
+    script {
+      // Check if container exists
+      def container = sh(script: "docker ps -a -q -f name=netflix-clone-container", returnStdout: true).trim()
+      if (container) {
+        echo "Stopping and removing existing container: ${container}"
+        sh "docker stop ${container} || true"
+        sh "docker rm ${container} || true"
+      } else {
+        echo "No existing container found."
+      }
+    }
+  }
+}
         stage('Run New Container') {
             steps {
                 script {
