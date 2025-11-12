@@ -22,7 +22,7 @@ pipeline {
         }
 
  stage('Stop Old Container') {
-  steps {
+   steps {
     script {
       // Check if container exists
       def container = sh(script: "docker ps -a -q -f name=netflix-clone-container", returnStdout: true).trim()
