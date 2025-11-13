@@ -1,46 +1,46 @@
 pipeline {
     agent any
+
     environment {
-        IMAGE = "netflix-clone"
-        CONTAINER = "netflix-clone-container"
+        DOCKERHUB_CREDENTIALS = 'dockerhub'
+        IMAGE_NAME = 'mydocker691/netflix-app'
         APP_VERSION = "v1.0.${BUILD_NUMBER}"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/gitproject96/netflix-clone.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t $IMAGE:$APP_VERSION .'
+                    echo "🚀 Building Docker Image: $IMAGE_NAME:$BUILD_NUMBER"
+                    sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
                 }
             }
         }
 
-stage('Stop Old Container') {
-  steps {
-    script {
-      // Check if container exists
-      def container = sh(script: "docker ps -a -q -f name=netflix-clone-container", returnStdout: true).trim()
-      if (container) {
-        echo "Stopping and removing existing container: ${container}"
-        sh "docker stop ${container} || true"
-        sh "docker rm ${container} || true"
-      } else {
-        echo "No existing container found."
-      }
-    }
-  }
-}
-        stage('Run New Container') {
+        stage('Push to DockerHub') {
             steps {
-                script {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                    docker run -d --name $CONTAINER -p 5000:5000 -e APP_VERSION=$APP_VERSION $IMAGE:$APP_VERSION
+                    echo "$PASS" | docker login -u "$USER" --password-stdin
+                    docker push $IMAGE_NAME:$BUILD_NUMBER
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+                    sed -i "s|mydocker691/netflix-app:.*|$IMAGE_NAME:$BUILD_NUMBER|g" k8s/k8s-deployment.yaml
+                    kubectl --kubeconfig=$KUBECONFIG apply -f k8s/k8s-deployment.yaml
+                    kubectl --kubeconfig=$KUBECONFIG rollout status deployment/netflix-app
                     '''
                 }
             }
@@ -49,10 +49,10 @@ stage('Stop Old Container') {
 
     post {
         success {
-            echo "✅ Deployment successful! Visit http://<EC2-PUBLIC-IP>:5000"
+            echo "✅ Deployment successful on Kubernetes!"
         }
         failure {
-            echo "❌ Deployment failed!"
+            echo "❌ Deployment failed. Check logs!"
         }
     }
 }
