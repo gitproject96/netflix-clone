@@ -13,12 +13,17 @@ spec:
     metadata:
       labels:
         app: netflix
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
     spec:
       containers:
       - name: netflix
         image: mydocker691/netflix-app:${BUILD_NUMBER}
         ports:
         - containerPort: 5000
+
 ---
 apiVersion: v1
 kind: Service
