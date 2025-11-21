@@ -1,9 +1,23 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request
 import os
+from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
 APP_VERSION = os.getenv("APP_VERSION", "v0.0.0")
 
+# ---------------------------
+# PROMETHEUS METRICS ENABLED
+# ---------------------------
+metrics = PrometheusMetrics(app)
+
+# Add app version label to all metrics
+metrics.info("app_info", "Application info", version=APP_VERSION)
+
+# Optional custom metrics (request count, latency, etc. auto-enabled by PrometheusMetrics)
+
+# ---------------------------
+# YOUR ORIGINAL HTML
+# ---------------------------
 html = f"""
 <html>
 <head>
